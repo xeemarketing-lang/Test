@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FMCG Field Force & Distributor Analytics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121b2e;
+      --text: #e8eefc;
+      --muted: #a6b4d6;
+      --accent: #4f8cff;
+      --ok: #2ecc71;
+      --warn: #f5b041;
+      --bad: #e74c3c;
+      --border: #23304f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #09101f 0%, #0d1628 100%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 { margin: 0 0 6px 0; }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .filters, .kpis, .charts, .tables {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .filters { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .kpis { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .charts { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .tables { grid-template-columns: 1fr 1fr; }
+
+    .card {
+      background: rgba(18, 27, 46, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0f1729;
+      color: var(--text);
+      padding: 10px;
+    }
+
+    .kpi-label { color: var(--muted); font-size: 12px; }
+    .kpi-value { font-size: 27px; font-weight: 700; margin-top: 4px; }
+    .kpi-trend { font-size: 12px; margin-top: 2px; }
+    .up { color: var(--ok); }
+    .down { color: var(--bad); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 9px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th { color: var(--muted); font-weight: 600; }
+
+    @media (max-width: 900px) {
+      .tables { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FMCG Field Force & Distributor Dashboard</h1>
+    <div class="subtitle">Advanced analytics: churn, retention, MAU/DAU, sales trend, booker productivity, and inventory health.</div>
+
+    <div class="filters">
+      <div class="card">
+        <label>Region</label>
+        <select id="regionFilter">
+          <option value="All">All</option>
+          <option>North</option>
+          <option>South</option>
+          <option>East</option>
+          <option>West</option>
+        </select>
+      </div>
+      <div class="card">
+        <label>Channel</label>
+        <select id="channelFilter">
+          <option value="All">All</option>
+          <option>General Trade</option>
+          <option>Modern Trade</option>
+          <option>Wholesale</option>
+        </select>
+      </div>
+      <div class="card">
+        <label>Month</label>
+        <select id="monthFilter"></select>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="card"><div class="kpi-label">Revenue</div><div class="kpi-value" id="kpiRevenue">-</div><div class="kpi-trend up" id="trendRevenue">-</div></div>
+      <div class="card"><div class="kpi-label">Churn Rate</div><div class="kpi-value" id="kpiChurn">-</div><div class="kpi-trend down" id="trendChurn">-</div></div>
+      <div class="card"><div class="kpi-label">Retention</div><div class="kpi-value" id="kpiRetention">-</div><div class="kpi-trend up" id="trendRetention">-</div></div>
+      <div class="card"><div class="kpi-label">DAU / MAU</div><div class="kpi-value" id="kpiStickiness">-</div><div class="kpi-trend up">User engagement</div></div>
+      <div class="card"><div class="kpi-label">Inventory Cover (days)</div><div class="kpi-value" id="kpiInventory">-</div><div class="kpi-trend" id="trendInventory">-</div></div>
+    </div>
+
+    <div class="charts">
+      <div class="card"><canvas id="salesTrend"></canvas></div>
+      <div class="card"><canvas id="dauMauChart"></canvas></div>
+      <div class="card"><canvas id="churnRetentionChart"></canvas></div>
+      <div class="card"><canvas id="inventoryChart"></canvas></div>
+    </div>
+
+    <div class="tables">
+      <div class="card">
+        <h3>Top Booker Performance</h3>
+        <table>
+          <thead><tr><th>Booker</th><th>Orders</th><th>Revenue</th><th>Strike Rate</th></tr></thead>
+          <tbody id="bookerTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Distributor Health</h3>
+        <table>
+          <thead><tr><th>Distributor</th><th>Fill Rate</th><th>OOS SKUs</th><th>Coverage</th></tr></thead>
+          <tbody id="distTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const dataset = months.map((month, i) => ({
+      month,
+      revenue: 640000 + i * 29000 + (i % 3) * 8000,
+      churn: 6.2 - (i * 0.15) + (i % 2 ? 0.2 : 0),
+      retention: 89 + i * 0.35,
+      dau: 3200 + i * 110,
+      mau: 9600 + i * 180,
+      inventoryDays: 18 - i * 0.4,
+      region: ["North", "South", "East", "West"][i % 4],
+      channel: ["General Trade", "Modern Trade", "Wholesale"][i % 3]
+    }));
+
+    const bookers = [
+      { name: "Ravi", orders: 520, revenue: 252000, strike: "81%" },
+      { name: "Neha", orders: 488, revenue: 239500, strike: "78%" },
+      { name: "Irfan", orders: 465, revenue: 221900, strike: "77%" },
+      { name: "Pooja", orders: 440, revenue: 214300, strike: "75%" },
+      { name: "Aman", orders: 419, revenue: 203000, strike: "73%" }
+    ];
+
+    const distributors = [
+      { name: "A-One Distributors", fillRate: "96%", oos: 3, coverage: "Excellent" },
+      { name: "Metro FMCG Hub", fillRate: "93%", oos: 6, coverage: "Good" },
+      { name: "Cityline Traders", fillRate: "90%", oos: 8, coverage: "Watch" },
+      { name: "RapidSupply", fillRate: "88%", oos: 11, coverage: "Risk" }
+    ];
+
+    const monthFilter = document.getElementById('monthFilter');
+    monthFilter.innerHTML = '<option value="All">All</option>' + months.map(m => `<option>${m}</option>`).join('');
+
+    let charts = {};
+
+    function formatCurrency(v) {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
+    }
+
+    function getFilteredData() {
+      const region = document.getElementById('regionFilter').value;
+      const channel = document.getElementById('channelFilter').value;
+      const month = document.getElementById('monthFilter').value;
+
+      return dataset.filter(d =>
+        (region === 'All' || d.region === region) &&
+        (channel === 'All' || d.channel === channel) &&
+        (month === 'All' || d.month === month)
+      );
+    }
+
+    function avg(arr, key) {
+      return arr.reduce((sum, d) => sum + d[key], 0) / (arr.length || 1);
+    }
+
+    function renderTables() {
+      document.getElementById('bookerTable').innerHTML = bookers.map(b =>
+        `<tr><td>${b.name}</td><td>${b.orders}</td><td>${formatCurrency(b.revenue)}</td><td>${b.strike}</td></tr>`
+      ).join('');
+
+      document.getElementById('distTable').innerHTML = distributors.map(d =>
+        `<tr><td>${d.name}</td><td>${d.fillRate}</td><td>${d.oos}</td><td>${d.coverage}</td></tr>`
+      ).join('');
+    }
+
+    function renderKPIs(data) {
+      const totalRevenue = data.reduce((s, d) => s + d.revenue, 0);
+      const churn = avg(data, 'churn');
+      const retention = avg(data, 'retention');
+      const stickiness = (avg(data, 'dau') / avg(data, 'mau')) * 100;
+      const inv = avg(data, 'inventoryDays');
+
+      document.getElementById('kpiRevenue').textContent = formatCurrency(totalRevenue);
+      document.getElementById('kpiChurn').textContent = `${churn.toFixed(1)}%`;
+      document.getElementById('kpiRetention').textContent = `${retention.toFixed(1)}%`;
+      document.getElementById('kpiStickiness').textContent = `${stickiness.toFixed(1)}%`;
+      document.getElementById('kpiInventory').textContent = `${inv.toFixed(1)} days`;
+
+      document.getElementById('trendRevenue').textContent = '↑ vs previous period';
+      document.getElementById('trendChurn').textContent = '↓ lower is better';
+      document.getElementById('trendRetention').textContent = '↑ stronger loyalty';
+      const invText = inv <= 12 ? 'Healthy cover' : 'High stock lock-up';
+      document.getElementById('trendInventory').textContent = invText;
+      document.getElementById('trendInventory').className = `kpi-trend ${inv <= 12 ? 'up' : 'down'}`;
+    }
+
+    function createOrUpdateChart(id, config) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), config);
+    }
+
+    function renderCharts(data) {
+      const labels = data.map(d => d.month);
+
+      createOrUpdateChart('salesTrend', {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Sales (INR)', data: data.map(d => d.revenue), borderColor: '#4f8cff', backgroundColor: 'rgba(79,140,255,0.2)', fill: true }] },
+        options: { plugins: { legend: { labels: { color: '#e8eefc' } } }, scales: { x: { ticks: { color: '#a6b4d6' } }, y: { ticks: { color: '#a6b4d6' } } } }
+      });
+
+      createOrUpdateChart('dauMauChart', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'DAU', data: data.map(d => d.dau), backgroundColor: '#2ecc71' },
+            { label: 'MAU', data: data.map(d => d.mau), backgroundColor: '#7fb3ff' }
+          ]
+        },
+        options: { plugins: { legend: { labels: { color: '#e8eefc' } } }, scales: { x: { ticks: { color: '#a6b4d6' } }, y: { ticks: { color: '#a6b4d6' } } } }
+      });
+
+      createOrUpdateChart('churnRetentionChart', {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Churn %', data: data.map(d => d.churn), borderColor: '#e74c3c', tension: 0.25 },
+            { label: 'Retention %', data: data.map(d => d.retention), borderColor: '#2ecc71', tension: 0.25 }
+          ]
+        },
+        options: { plugins: { legend: { labels: { color: '#e8eefc' } } }, scales: { x: { ticks: { color: '#a6b4d6' } }, y: { ticks: { color: '#a6b4d6' } } } }
+      });
+
+      createOrUpdateChart('inventoryChart', {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Inventory Cover Days', data: data.map(d => d.inventoryDays), backgroundColor: '#f5b041' }] },
+        options: { plugins: { legend: { labels: { color: '#e8eefc' } } }, scales: { x: { ticks: { color: '#a6b4d6' } }, y: { ticks: { color: '#a6b4d6' } } } }
+      });
+    }
+
+    function render() {
+      const filtered = getFilteredData();
+      renderKPIs(filtered);
+      renderCharts(filtered);
+      renderTables();
+    }
+
+    ['regionFilter', 'channelFilter', 'monthFilter'].forEach(id =>
+      document.getElementById(id).addEventListener('change', render)
+    );
+
+    render();
+  </script>
+</body>
+</html>
