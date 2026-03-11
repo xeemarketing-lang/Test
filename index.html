@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FMCG Advanced Analytics Command Center</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #070d1a;
+      --panel: #0f1930;
+      --panel-2: #15213f;
+      --text: #ecf2ff;
+      --muted: #9aaad2;
+      --line: #233358;
+      --ok: #2ecc71;
+      --warn: #f1c40f;
+      --bad: #ff6b6b;
+      --accent: #5da9ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top,#0d1730,#070d1a 45%); color:var(--text); }
+    .container { max-width: 1480px; margin: 0 auto; padding: 24px; }
+    h1 { margin:0 0 6px; }
+    .subtitle { margin:0 0 18px; color:var(--muted); }
+    .grid { display:grid; gap:14px; }
+    .filters { grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); margin-bottom:14px; }
+    .highlights { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); margin-bottom:14px; }
+    .charts { grid-template-columns: repeat(auto-fit,minmax(360px,1fr)); margin-bottom:14px; }
+    .modules { grid-template-columns: repeat(auto-fit,minmax(290px,1fr)); margin-bottom:14px; }
+    .tables { grid-template-columns: 1fr 1fr; }
+    .card { background: rgba(15,25,48,.96); border:1px solid var(--line); border-radius: 14px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+    .module-title { font-size:15px; margin:0 0 10px; }
+    label { display:block; color:var(--muted); margin-bottom:6px; font-size:12px; }
+    select { width:100%; background:#0b1326; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px; }
+    .kpi-label { color:var(--muted); font-size:11px; text-transform: uppercase; letter-spacing:.4px; }
+    .kpi-value { font-size:24px; font-weight:700; margin-top:4px; }
+    .kpi-sub { font-size:12px; margin-top:2px; }
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .metric-list { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; font-size:13px; }
+    .metric-list div { padding:7px; border:1px solid var(--line); border-radius:8px; background:var(--panel-2); }
+    .metric-list span { display:block; color:var(--muted); font-size:11px; margin-bottom:3px; }
+    table { width:100%; border-collapse: collapse; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:8px; text-align:left; }
+    th { color:var(--muted); font-weight:600; }
+    @media (max-width: 960px){ .tables { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>FMCG Advanced Analytics Command Center</h1>
+  <p class="subtitle">Field Force + Booker + Brand + Customer + SKU + Trade Marketing + Supply Chain | Churn, Retention, MAU/DAU, Sales, Inventory, and more.</p>
+
+  <div class="grid filters">
+    <div class="card"><label>Region</label><select id="regionFilter"><option value="All">All</option><option>North</option><option>South</option><option>East</option><option>West</option></select></div>
+    <div class="card"><label>Channel</label><select id="channelFilter"><option value="All">All</option><option>General Trade</option><option>Modern Trade</option><option>Wholesale</option></select></div>
+    <div class="card"><label>Month</label><select id="monthFilter"></select></div>
+    <div class="card"><label>Distributor Tier</label><select id="tierFilter"><option value="All">All</option><option>Tier-1</option><option>Tier-2</option><option>Tier-3</option></select></div>
+  </div>
+
+  <div class="grid highlights">
+    <div class="card"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kRevenue">-</div><div class="kpi-sub ok">YoY growth on track</div></div>
+    <div class="card"><div class="kpi-label">Churn</div><div class="kpi-value" id="kChurn">-</div><div class="kpi-sub bad">Lower is better</div></div>
+    <div class="card"><div class="kpi-label">Retention</div><div class="kpi-value" id="kRetention">-</div><div class="kpi-sub ok">Loyalty strength</div></div>
+    <div class="card"><div class="kpi-label">MAU/DAU Stickiness</div><div class="kpi-value" id="kStickiness">-</div><div class="kpi-sub warn">Digital engagement</div></div>
+    <div class="card"><div class="kpi-label">Inventory Days</div><div class="kpi-value" id="kInventory">-</div><div class="kpi-sub" id="kInventorySub">-</div></div>
+    <div class="card"><div class="kpi-label">Perfect Order %</div><div class="kpi-value" id="kPerfectOrder">-</div><div class="kpi-sub ok">Supply reliability</div></div>
+  </div>
+
+  <div class="grid charts">
+    <div class="card"><canvas id="salesChart"></canvas></div>
+    <div class="card"><canvas id="fieldForceChart"></canvas></div>
+    <div class="card"><canvas id="customerChart"></canvas></div>
+    <div class="card"><canvas id="tradeChart"></canvas></div>
+  </div>
+
+  <div class="grid modules">
+    <div class="card">
+      <h3 class="module-title">1) Field Force Management</h3>
+      <div class="metric-list" id="fieldForceMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">2) Booker Performance</h3>
+      <div class="metric-list" id="bookerMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">3) Brand Performance</h3>
+      <div class="metric-list" id="brandMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">4) Customer Analytics</h3>
+      <div class="metric-list" id="customerMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">5) SKU Analytics</h3>
+      <div class="metric-list" id="skuMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">6) Trade Marketing</h3>
+      <div class="metric-list" id="tradeMetrics"></div>
+    </div>
+    <div class="card">
+      <h3 class="module-title">7) Supply Chain Deep Dive</h3>
+      <div class="metric-list" id="supplyMetrics"></div>
+    </div>
+  </div>
+
+  <div class="grid tables">
+    <div class="card">
+      <h3 class="module-title">Booker Leaderboard</h3>
+      <table>
+        <thead><tr><th>Booker</th><th>TGT</th><th>ACH</th><th>Strike Rate</th><th>Avg Bill</th></tr></thead>
+        <tbody id="bookerTable"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3 class="module-title">Distributor & Inventory Health</h3>
+      <table>
+        <thead><tr><th>Distributor</th><th>Inv Days</th><th>Stockout %</th><th>Primary:Secondary</th><th>Perfect Order</th></tr></thead>
+        <tbody id="distTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const regions = ["North","South","East","West"];
+const channels = ["General Trade","Modern Trade","Wholesale"];
+const tiers = ["Tier-1","Tier-2","Tier-3"];
+
+const data = months.map((month, i) => ({
+  month,
+  region: regions[i % 4],
+  channel: channels[i % 3],
+  tier: tiers[i % 3],
+  revenue: 820000 + (i * 56000),
+  churn: 7 - i * 0.22,
+  retention: 88 + i * 0.45,
+  dau: 2600 + i * 140,
+  mau: 8400 + i * 210,
+  beatAdherence: 76 + i * 1.1,
+  outletCoverage: 68 + i * 1.4,
+  callCompliance: 71 + i * 1.2,
+  productiveCalls: 58 + i * 1.3,
+  routeTracking: 74 + i * 1.0,
+  strikeRate: 64 + i * 1.2,
+  skuProductivity: 42 + i,
+  avgBill: 1120 + i * 45,
+  conversionRate: 37 + i * 1.1,
+  brandAch: 81 + i * 1.1,
+  marketShare: 19 + i * 0.35,
+  contributionMargin: 14 + i * 0.2,
+  growthTrajectory: 8 + i * 0.4,
+  clv: 7600 + i * 210,
+  cac: 910 - i * 16,
+  nps: 36 + i * 1.1,
+  skuPerBill: 3.4 + i * 0.05,
+  profitability: 11 + i * 0.22,
+  fastSkuPct: 61 + i * 0.5,
+  cannibalization: 9.8 - i * 0.2,
+  promoRoi: 1.2 + i * 0.06,
+  schemeEffectiveness: 62 + i * 0.7,
+  tradeSpend: 6.8 + i * 0.25,
+  displayCompliance: 54 + i * 1.3,
+  inventoryDays: 21 - i * 0.5,
+  primarySecondaryRatio: 1.13 - i * 0.01,
+  stockout: 6.4 - i * 0.24,
+  perfectOrder: 84 + i * 0.7
+}));
+
+const bookers = [
+  {name:'Ravi', tgt:12.5, ach:13.6, strike:82, avgBill:1720},
+  {name:'Neha', tgt:11.9, ach:12.8, strike:79, avgBill:1660},
+  {name:'Aman', tgt:10.4, ach:10.1, strike:74, avgBill:1510},
+  {name:'Pooja', tgt:9.8, ach:10.5, strike:77, avgBill:1590}
+];
+
+const distributors = [
+  {name:'A-One Distributors', invDays:11.8, stockout:2.9, ratio:1.01, perfect:97},
+  {name:'Metro FMCG Hub', invDays:13.4, stockout:3.8, ratio:0.98, perfect:94},
+  {name:'Cityline Traders', invDays:16.2, stockout:5.4, ratio:0.93, perfect:91},
+  {name:'RapidSupply', invDays:18.7, stockout:6.8, ratio:0.89, perfect:88}
+];
+
+const monthFilter = document.getElementById('monthFilter');
+monthFilter.innerHTML = '<option value="All">All</option>' + months.map(m => `<option>${m}</option>`).join('');
+let charts = {};
+
+const avg = (arr, key) => arr.reduce((s,d)=>s+d[key],0)/(arr.length||1);
+const currency = v => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(v);
+
+function filtered(){
+  const r = document.getElementById('regionFilter').value;
+  const c = document.getElementById('channelFilter').value;
+  const m = document.getElementById('monthFilter').value;
+  const t = document.getElementById('tierFilter').value;
+  return data.filter(d => (r==='All'||d.region===r) && (c==='All'||d.channel===c) && (m==='All'||d.month===m) && (t==='All'||d.tier===t));
+}
+
+function metric(el, label, value){
+  return `<div><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function renderKpis(d){
+  document.getElementById('kRevenue').textContent = currency(d.reduce((s,x)=>s+x.revenue,0));
+  document.getElementById('kChurn').textContent = `${avg(d,'churn').toFixed(2)}%`;
+  document.getElementById('kRetention').textContent = `${avg(d,'retention').toFixed(2)}%`;
+  document.getElementById('kStickiness').textContent = `${((avg(d,'dau')/avg(d,'mau'))*100).toFixed(1)}%`;
+  const inv = avg(d,'inventoryDays');
+  document.getElementById('kInventory').textContent = `${inv.toFixed(1)} days`;
+  document.getElementById('kInventorySub').textContent = inv <= 14 ? 'Healthy cover' : 'High stock lock-up';
+  document.getElementById('kInventorySub').className = `kpi-sub ${inv <= 14 ? 'ok' : 'warn'}`;
+  document.getElementById('kPerfectOrder').textContent = `${avg(d,'perfectOrder').toFixed(1)}%`;
+}
+
+function draw(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+const axis = { x:{ticks:{color:'#9aaad2'}}, y:{ticks:{color:'#9aaad2'}} };
+const legend = { labels: { color: '#ecf2ff' } };
+
+function renderCharts(d){
+  const labels = d.map(x=>x.month);
+  draw('salesChart',{type:'line',data:{labels,datasets:[{label:'Revenue',data:d.map(x=>x.revenue),borderColor:'#5da9ff',backgroundColor:'rgba(93,169,255,.18)',fill:true}]},options:{plugins:{legend},scales:axis}});
+  draw('fieldForceChart',{type:'bar',data:{labels,datasets:[{label:'Beat Adherence %',data:d.map(x=>x.beatAdherence),backgroundColor:'#2ecc71'},{label:'Productive Calls %',data:d.map(x=>x.productiveCalls),backgroundColor:'#f1c40f'}]},options:{plugins:{legend},scales:axis}});
+  draw('customerChart',{type:'line',data:{labels,datasets:[{label:'Churn %',data:d.map(x=>x.churn),borderColor:'#ff6b6b'},{label:'Retention %',data:d.map(x=>x.retention),borderColor:'#2ecc71'},{label:'NPS',data:d.map(x=>x.nps),borderColor:'#5da9ff'}]},options:{plugins:{legend},scales:axis}});
+  draw('tradeChart',{type:'bar',data:{labels,datasets:[{label:'Promotion ROI',data:d.map(x=>x.promoRoi),backgroundColor:'#9b59b6'},{label:'Display Compliance %',data:d.map(x=>x.displayCompliance),backgroundColor:'#3498db'}]},options:{plugins:{legend},scales:axis}});
+}
+
+function renderModules(d){
+  document.getElementById('fieldForceMetrics').innerHTML = [
+    metric(null,'Beat Plan Adherence',`${avg(d,'beatAdherence').toFixed(1)}%`),
+    metric(null,'Outlet Coverage',`${avg(d,'outletCoverage').toFixed(1)}%`),
+    metric(null,'Call Compliance',`${avg(d,'callCompliance').toFixed(1)}%`),
+    metric(null,'Productive Calls',`${avg(d,'productiveCalls').toFixed(1)}%`),
+    metric(null,'Route Tracking',`${avg(d,'routeTracking').toFixed(1)}%`),
+    metric(null,'Daily Sales Calls',`${Math.round(avg(d,'dau')/42)}`)
+  ].join('');
+
+  document.getElementById('bookerMetrics').innerHTML = [
+    metric(null,'TGT vs ACH',`${avg(d,'brandAch').toFixed(1)}% ACH`),
+    metric(null,'Strike Rate',`${avg(d,'strikeRate').toFixed(1)}%`),
+    metric(null,'SKU Productivity',`${avg(d,'skuProductivity').toFixed(1)} SKU/day`),
+    metric(null,'Avg Bill Value',currency(avg(d,'avgBill'))),
+    metric(null,'Conversion Rate',`${avg(d,'conversionRate').toFixed(1)}%`),
+    metric(null,'Booker Efficiency','High')
+  ].join('');
+
+  document.getElementById('brandMetrics').innerHTML = [
+    metric(null,'Brand TGT vs ACH',`${avg(d,'brandAch').toFixed(1)}%`),
+    metric(null,'Market Share',`${avg(d,'marketShare').toFixed(1)}%`),
+    metric(null,'Contribution Margin',`${avg(d,'contributionMargin').toFixed(1)}%`),
+    metric(null,'Growth Trajectory',`${avg(d,'growthTrajectory').toFixed(1)}%`),
+    metric(null,'Top Brand','HomeCare Pro'),
+    metric(null,'Declining Brand','Snacks Lite')
+  ].join('');
+
+  document.getElementById('customerMetrics').innerHTML = [
+    metric(null,'Churn Prediction',`${avg(d,'churn').toFixed(1)}% risk`),
+    metric(null,'Retention',`${avg(d,'retention').toFixed(1)}%`),
+    metric(null,'Customer Lifetime Value',currency(avg(d,'clv'))),
+    metric(null,'Acquisition Cost',currency(avg(d,'cac'))),
+    metric(null,'NPS',avg(d,'nps').toFixed(1)),
+    metric(null,'MAU/DAU',`${((avg(d,'dau')/avg(d,'mau'))*100).toFixed(1)}%`)
+  ].join('');
+
+  document.getElementById('skuMetrics').innerHTML = [
+    metric(null,'SKU per Bill',avg(d,'skuPerBill').toFixed(2)),
+    metric(null,'Basket Analysis','Adjacency optimized'),
+    metric(null,'SKU Profitability',`${avg(d,'profitability').toFixed(1)}%`),
+    metric(null,'Fast Moving SKU',`${avg(d,'fastSkuPct').toFixed(1)}%`),
+    metric(null,'Slow Moving SKU',`${(100-avg(d,'fastSkuPct')).toFixed(1)}%`),
+    metric(null,'Cannibalization Effect',`${avg(d,'cannibalization').toFixed(1)}%`)
+  ].join('');
+
+  document.getElementById('tradeMetrics').innerHTML = [
+    metric(null,'Promotion ROI',`${avg(d,'promoRoi').toFixed(2)}x`),
+    metric(null,'Scheme Effectiveness',`${avg(d,'schemeEffectiveness').toFixed(1)}%`),
+    metric(null,'Trade Spend',`${avg(d,'tradeSpend').toFixed(2)}% of sales`),
+    metric(null,'Display Compliance',`${avg(d,'displayCompliance').toFixed(1)}%`),
+    metric(null,'Promo Lift','18.4%'),
+    metric(null,'ROI Status','Profitable')
+  ].join('');
+
+  document.getElementById('supplyMetrics').innerHTML = [
+    metric(null,'Inventory Days',`${avg(d,'inventoryDays').toFixed(1)} days`),
+    metric(null,'Primary vs Secondary',`${avg(d,'primarySecondaryRatio').toFixed(2)}`),
+    metric(null,'Stock Out Analysis',`${avg(d,'stockout').toFixed(2)}%`),
+    metric(null,'Perfect Order %',`${avg(d,'perfectOrder').toFixed(1)}%`),
+    metric(null,'Fill Rate','95.2%'),
+    metric(null,'OTIF','93.8%')
+  ].join('');
+}
+
+function renderTables(){
+  document.getElementById('bookerTable').innerHTML = bookers.map(b => `<tr><td>${b.name}</td><td>₹${b.tgt}L</td><td>₹${b.ach}L</td><td>${b.strike}%</td><td>${currency(b.avgBill)}</td></tr>`).join('');
+  document.getElementById('distTable').innerHTML = distributors.map(d => `<tr><td>${d.name}</td><td>${d.invDays}d</td><td>${d.stockout}%</td><td>${d.ratio}</td><td>${d.perfect}%</td></tr>`).join('');
+}
+
+function render(){
+  const d = filtered();
+  renderKpis(d); renderCharts(d); renderModules(d); renderTables();
+}
+
+['regionFilter','channelFilter','monthFilter','tierFilter'].forEach(id => document.getElementById(id).addEventListener('change',render));
+render();
+</script>
+</body>
+</html>
